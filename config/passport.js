@@ -54,14 +54,15 @@ passport.use(new LocalStrategy(
   }
 ));
 
-// Discord Strategy
-passport.use(new DiscordStrategy(
-  {
-    clientID: process.env.DISCORD_CLIENT_ID,
-    clientSecret: process.env.DISCORD_CLIENT_SECRET,
-    callbackURL: process.env.DISCORD_CALLBACK_URL,
-    scope: ['identify', 'email'],
-  },
+// Discord Strategy (only if credentials are configured)
+if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_ID !== 'your-discord-client-id') {
+  passport.use(new DiscordStrategy(
+    {
+      clientID: process.env.DISCORD_CLIENT_ID,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET,
+      callbackURL: process.env.DISCORD_CALLBACK_URL,
+      scope: ['identify', 'email'],
+    },
   (accessToken, refreshToken, profile, done) => {
     try {
       const discordId = profile.id;
@@ -128,6 +129,9 @@ passport.use(new DiscordStrategy(
       return done(err);
     }
   }
-));
+  ));
+} else {
+  console.log('  [AUTH]  Discord login disabled (no DISCORD_CLIENT_ID)');
+}
 
 module.exports = passport;
