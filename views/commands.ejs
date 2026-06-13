@@ -1,0 +1,46 @@
+<div class="page-header">
+  <h1>Commands</h1>
+  <p>All available commands in the Rec Home client.</p>
+</div>
+
+<section class="section">
+  <div class="commands-search">
+    <input type="text" id="command-search" placeholder="Search commands..." class="form-input" style="max-width: 400px;">
+  </div>
+
+  <div class="commands-grid" id="commands-grid">
+    <% 
+    const categories = {};
+    commands.forEach(cmd => {
+      if (!categories[cmd.category]) categories[cmd.category] = [];
+      categories[cmd.category].push(cmd);
+    });
+    
+    Object.keys(categories).forEach(cat => { %>
+      <div class="command-category">
+        <h3 class="category-title"><%= cat %></h3>
+        <% categories[cat].forEach(cmd => { %>
+          <div class="command-card" data-search="<%= cmd.name %> <%= cmd.desc %> <%= cmd.category %>">
+            <div class="command-card-header">
+              <code class="command-card-name">/<%= cmd.name %></code>
+              <% if (cmd.args) { %>
+                <span class="command-card-args"><%= cmd.args %></span>
+              <% } %>
+            </div>
+            <p class="command-card-desc"><%= cmd.desc %></p>
+          </div>
+        <% }); %>
+      </div>
+    <% }); %>
+  </div>
+</section>
+
+<script>
+  document.getElementById('command-search').addEventListener('input', function(e) {
+    const query = e.target.value.toLowerCase();
+    document.querySelectorAll('.command-card').forEach(card => {
+      const searchData = card.getAttribute('data-search').toLowerCase();
+      card.style.display = searchData.includes(query) ? '' : 'none';
+    });
+  });
+</script>

@@ -1,0 +1,37 @@
+{
+  "name": "rec-home",
+  "version": "1.0.0",
+  "description": "Rec Home - Your Rec Room Companion. Backend API and web dashboard.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "rec-room",
+    "companion",
+    "gaming"
+  ],
+  "author": "Rec Home",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.10.0",
+    "connect-flash": "^0.1.1",
+    "connect-sqlite3": "^0.9.16",
+    "dotenv": "^17.4.2",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "express-validator": "^7.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
+    "passport": "^0.7.0",
+    "passport-discord": "^0.1.4",
+    "passport-local": "^1.0.0",
+    "sharp": "^0.35.1",
+    "uuid": "^14.0.0",
+    "ws": "^8.21.0"
+  }
+}

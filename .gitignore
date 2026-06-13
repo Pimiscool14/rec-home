@@ -1,0 +1,12 @@
+node_modules/
+.env
+certs/
+uploads/*
+!uploads/.gitkeep
+database/*.db
+database/*.db-shm
+database/*.db-wal
+database/sessions.db
+*.log
+.DS_Store
+Thumbs.db

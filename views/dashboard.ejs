@@ -1,0 +1,86 @@
+<div class="dashboard-page">
+  <div class="dashboard-header">
+    <div class="dashboard-welcome">
+      <h1>Welcome back, <%= user.display_name || user.username %>!</h1>
+      <p>Here's your activity overview.</p>
+    </div>
+    <div class="dashboard-actions">
+      <a href="/profile" class="btn btn-secondary">⚙️ Settings</a>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">📊</div>
+      <div class="stat-value"><%= stats.totalCommands %></div>
+      <div class="stat-label">Total Commands</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🔑</div>
+      <div class="stat-value"><%= stats.apiKeys %></div>
+      <div class="stat-label">API Keys</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">💰</div>
+      <div class="stat-value"><%= user.tokens || 0 %></div>
+      <div class="stat-label">Tokens</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-value">Lv.<%= user.level || 1 %></div>
+      <div class="stat-label">Level</div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <div class="dashboard-card">
+      <h3>Recent Commands</h3>
+      <% if (stats.recentCommands && stats.recentCommands.length > 0) { %>
+        <div class="command-list">
+          <% stats.recentCommands.forEach(cmd => { %>
+            <div class="command-item">
+              <span class="command-name">/<%= cmd.command %></span>
+              <% if (cmd.args) { %>
+                <span class="command-args"><%= cmd.args.substring(0, 60) %></span>
+              <% } %>
+              <span class="command-time"><%= new Date(cmd.created_at).toLocaleString() %></span>
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <p class="empty-state">No commands logged yet. Start using Rec Home!</p>
+      <% } %>
+    </div>
+
+    <div class="dashboard-card">
+      <h3>Quick Actions</h3>
+      <div class="quick-actions">
+        <a href="/commands" class="quick-action">
+          <span class="qa-icon">📋</span>
+          <span class="qa-text">View All Commands</span>
+        </a>
+        <a href="/profile" class="quick-action">
+          <span class="qa-icon">⚙️</span>
+          <span class="qa-text">Manage Settings</span>
+        </a>
+        <a href="/download" class="quick-action">
+          <span class="qa-icon">📥</span>
+          <span class="qa-text">Download Client</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-card">
+    <h3>Your API Connection</h3>
+    <div class="api-info">
+      <p>Use the API to connect your client to Rec Home:</p>
+      <div class="code-block">
+        <code>curl -H "x-api-key: rh_YOUR_API_KEY" http://localhost:3000/api/status</code>
+      </div>
+      <p class="mt-1">
+        <a href="/profile" class="text-link">Generate API keys in your profile →</a>
+      </p>
+    </div>
+  </div>
+</div>

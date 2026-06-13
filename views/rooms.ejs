@@ -1,0 +1,212 @@
+<div class="page-header">
+  <h1>🏠 Rooms</h1>
+  <p>Create and join rooms with other players.</p>
+</div>
+
+<section class="section" style="padding-top: 0;">
+  <% if (user) { %>
+  <div class="rooms-layout">
+    <!-- Left: Rooms List -->
+    <div class="rooms-main">
+      <div class="rooms-tabs">
+        <button class="friends-tab active" onclick="switchRoomTab('public')">Public Rooms</button>
+        <button class="friends-tab" onclick="switchRoomTab('mine')">My Rooms</button>
+      </div>
+
+      <div id="rooms-list">
+        <p class="empty-state">Loading rooms...</p>
+      </div>
+    </div>
+
+    <!-- Right: Create Room -->
+    <div class="rooms-sidebar">
+      <div class="profile-card">
+        <h3>Create a Room</h3>
+        <form id="create-room-form">
+          <div class="form-group">
+            <label>Room Name</label>
+            <input type="text" id="room-name" placeholder="My Awesome Room" class="form-input" required minlength="2">
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <input type="text" id="room-desc" placeholder="What's this room about?" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>Room Type</label>
+            <select id="room-type" class="form-input">
+              <option value="public">Public - Anyone can join</option>
+              <option value="friends_only">Friends Only - Friends can join freely</option>
+              <option value="private">Private - Invite only</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Create Room</button>
+        </form>
+      </div>
+
+      <!-- Pending Invites -->
+      <div class="profile-card mt-1">
+        <h3>Pending Invites</h3>
+        <div id="pending-invites">
+          <p class="empty-state">Loading invites...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% } else { %>
+  <div class="text-center" style="padding: 60px 0;">
+    <p style="font-size: 2rem; margin-bottom: 16px;">🏠</p>
+    <h2>Sign in to join rooms</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 24px;">Create an account or log in to create and join rooms.</p>
+    <a href="/auth/login" class="btn btn-primary">Sign In</a>
+  </div>
+  <% } %>
+</section>
+
+<script>
+  let roomTab = 'public';
+
+  async function loadRooms() {
+    try {
+      const res = await fetch(roomTab === 'mine' ? '/rooms/my' : '/rooms/list');
+      const data = await res.json();
+      const el = document.getElementById('rooms-list');
+
+      if (data.rooms.length === 0) {
+        el.innerHTML = roomTab === 'mine'
+          ? '<p class="empty-state">You\'re not in any rooms yet. Create one or join a public room!</p>'
+          : '<p class="empty-state">No public rooms yet. Be the first to create one!</p>';
+        return;
+      }
+
+      el.innerHTML = data.rooms.map(r => `
+        <div class="room-card">
+          <div class="room-card-body">
+            <div class="room-card-header">
+              <h3>${escapeHtml(r.name)}</h3>
+              <span class="badge badge-${r.room_type === 'public' ? 'user' : 'mod'}">${r.room_type}</span>
+              ${r.my_role ? `<span class="badge badge-${r.my_role === 'owner' ? 'admin' : 'user'}">${r.my_role}</span>` : ''}
+            </div>
+            ${r.description ? `<p class="room-desc">${escapeHtml(r.description)}</p>` : ''}
+            <div class="room-meta">
+              <span>👤 ${r.owner_display || r.owner_username}</span>
+              <span>👥 ${r.member_count || 1}/${r.max_members}</span>
+              <span>📅 ${new Date(r.created_at).toLocaleDateString()}</span>
+            </div>
+            <div class="room-actions">
+              ${!r.my_role ? `<button class="btn btn-primary btn-sm" onclick="joinRoom(${r.id})">Join Room</button>` : ''}
+              ${r.my_role === 'owner' ? `<button class="btn btn-danger btn-sm" onclick="deleteRoom(${r.id})">Delete</button>` : ''}
+              ${r.my_role && r.my_role !== 'owner' ? `<button class="btn btn-secondary btn-sm" onclick="leaveRoom(${r.id})">Leave</button>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) { console.error(err); }
+  }
+
+  async function loadInvites() {
+    try {
+      const res = await fetch('/invites/pending');
+      const data = await res.json();
+      const el = document.getElementById('pending-invites');
+
+      if (data.invites.length === 0) {
+        el.innerHTML = '<p class="empty-state">No pending invites.</p>';
+        return;
+      }
+
+      el.innerHTML = data.invites.map(i => `
+        <div class="invite-item">
+          <strong>${escapeHtml(i.room_name)}</strong>
+          <span class="text-muted">from ${i.from_display || i.from_username}</span>
+          <div class="request-actions">
+            <button class="btn btn-primary btn-sm" onclick="acceptInvite(${i.id})">Accept</button>
+            <button class="btn btn-secondary btn-sm" onclick="declineInvite(${i.id})">Decline</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) { console.error(err); }
+  }
+
+  async function joinRoom(id) {
+    try {
+      const res = await fetch(`/rooms/${id}/join`, { method: 'POST' });
+      const data = await res.json();
+      alert(data.message || data.error);
+      loadAll();
+    } catch (err) { console.error(err); }
+  }
+
+  async function leaveRoom(id) {
+    if (!confirm('Leave this room?')) return;
+    try {
+      await fetch(`/rooms/${id}/leave`, { method: 'POST' });
+      loadAll();
+    } catch (err) { console.error(err); }
+  }
+
+  async function deleteRoom(id) {
+    if (!confirm('Delete this room? This cannot be undone.')) return;
+    try {
+      await fetch(`/rooms/${id}`, { method: 'DELETE' });
+      loadAll();
+    } catch (err) { console.error(err); }
+  }
+
+  async function acceptInvite(id) {
+    try {
+      await fetch(`/invites/${id}/accept`, { method: 'POST' });
+      loadAll();
+    } catch (err) { console.error(err); }
+  }
+
+  async function declineInvite(id) {
+    try {
+      await fetch(`/invites/${id}/decline`, { method: 'POST' });
+      loadAll();
+    } catch (err) { console.error(err); }
+  }
+
+  function switchRoomTab(tab) {
+    roomTab = tab;
+    document.querySelectorAll('.rooms-tabs .friends-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    loadRooms();
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function loadAll() {
+    loadRooms();
+    loadInvites();
+  }
+
+  document.getElementById('create-room-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('room-name').value;
+    const description = document.getElementById('room-desc').value;
+    const room_type = document.getElementById('room-type').value;
+
+    try {
+      const res = await fetch('/rooms/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description, room_type })
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+      if (data.success) {
+        document.getElementById('room-name').value = '';
+        document.getElementById('room-desc').value = '';
+        roomTab = 'mine';
+        document.querySelectorAll('.rooms-tabs .friends-tab')[1].click();
+        loadAll();
+      }
+    } catch (err) { console.error(err); }
+  });
+
+  loadAll();
+</script>

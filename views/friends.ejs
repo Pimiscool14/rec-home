@@ -1,0 +1,238 @@
+<div class="page-header">
+  <h1>👥 Friends</h1>
+  <p>Connect with other players and manage your friends list.</p>
+</div>
+
+<section class="section" style="padding-top: 0;">
+  <% if (user) { %>
+  <div class="friends-layout">
+    <!-- Left: Search + Friends List -->
+    <div class="friends-main">
+      <!-- Search -->
+      <div class="friends-search">
+        <input type="text" id="friend-search" placeholder="Search players by username..." class="form-input" oninput="searchUsers(this.value)">
+        <div id="search-results" class="search-results" style="display:none;"></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="friends-tabs">
+        <button class="friends-tab active" onclick="switchTab('all')">All Friends</button>
+        <button class="friends-tab" onclick="switchTab('requests')">Requests <span id="request-badge" class="badge badge-danger" style="display:none;">0</span></button>
+      </div>
+
+      <!-- Friends List -->
+      <div id="friends-list" class="friends-list">
+        <p class="empty-state">Loading friends...</p>
+      </div>
+    </div>
+
+    <!-- Right: Pending Requests -->
+    <div class="friends-sidebar" id="requests-panel" style="display:none;">
+      <h3>Incoming Requests</h3>
+      <div id="incoming-requests"></div>
+      <h3 class="mt-1">Outgoing Requests</h3>
+      <div id="outgoing-requests"></div>
+    </div>
+  </div>
+  <% } else { %>
+  <div class="text-center" style="padding: 60px 0;">
+    <p style="font-size: 2rem; margin-bottom: 16px;">👥</p>
+    <h2>Sign in to connect with friends</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 24px;">Create an account or log in to add friends, send requests, and more.</p>
+    <a href="/auth/login" class="btn btn-primary">Sign In</a>
+  </div>
+  <% } %>
+</section>
+
+<script>
+  let currentTab = 'all';
+  let searchTimeout;
+
+  async function searchUsers(query) {
+    clearTimeout(searchTimeout);
+    const resultsEl = document.getElementById('search-results');
+
+    if (query.length < 2) {
+      resultsEl.style.display = 'none';
+      return;
+    }
+
+    searchTimeout = setTimeout(async () => {
+      try {
+        const res = await fetch(`/friends/search?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        resultsEl.innerHTML = '';
+
+        if (data.users.length === 0) {
+          resultsEl.innerHTML = '<p class="empty-state" style="padding:12px;">No players found.</p>';
+        } else {
+          data.users.forEach(u => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.innerHTML = `
+              <div class="search-result-user">
+                ${u.avatar_url ? `<img src="${u.avatar_url}" class="gallery-avatar">` : `<span class="gallery-avatar-placeholder">${(u.display_name || u.username)[0]}</span>`}
+                <div>
+                  <strong>${u.display_name || u.username}</strong>
+                  <span class="search-result-meta">@${u.username} • Lv.${u.level}</span>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="sendRequest(${u.id}, this)">Add Friend</button>
+            `;
+            resultsEl.appendChild(item);
+          });
+        }
+        resultsEl.style.display = 'block';
+      } catch (err) {
+        console.error(err);
+      }
+    }, 300);
+  }
+
+  async function sendRequest(userId, btn) {
+    try {
+      const res = await fetch(`/friends/request/${userId}`, { method: 'POST' });
+      const data = await res.json();
+      btn.textContent = '✓ Sent';
+      btn.disabled = true;
+      btn.className = 'btn btn-sm';
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function acceptRequest(requestId, btn) {
+    try {
+      const res = await fetch(`/friends/accept/${requestId}`, { method: 'POST' });
+      const data = await res.json();
+      loadAll();
+    } catch (err) { console.error(err); }
+  }
+
+  async function declineRequest(requestId, btn) {
+    try {
+      await fetch(`/friends/decline/${requestId}`, { method: 'POST' });
+      loadAll();
+    } catch (err) { console.error(err); }
+  }
+
+  async function removeFriend(friendId) {
+    if (!confirm('Remove this friend?')) return;
+    try {
+      await fetch(`/friends/remove/${friendId}`, { method: 'POST' });
+      loadAll();
+    } catch (err) { console.error(err); }
+  }
+
+  async function loadAll() {
+    await loadFriends();
+    await loadRequests();
+  }
+
+  async function loadFriends() {
+    try {
+      const res = await fetch('/friends/list');
+      const data = await res.json();
+      const el = document.getElementById('friends-list');
+
+      if (data.friends.length === 0) {
+        el.innerHTML = '<p class="empty-state">No friends yet. Search for players above to add them!</p>';
+        return;
+      }
+
+      el.innerHTML = data.friends.map(f => `
+        <div class="friend-item">
+          <div class="friend-info">
+            ${f.avatar_url ? `<img src="${f.avatar_url}" class="friend-avatar">` : `<span class="gallery-avatar-placeholder">${(f.display_name || f.username)[0]}</span>`}
+            <div>
+              <strong>${f.display_name || f.username}</strong>
+              <span class="friend-meta">@${f.username} • Lv.${f.level} • Friends since ${new Date(f.friends_since).toLocaleDateString()}</span>
+            </div>
+          </div>
+          <div class="friend-actions">
+            <button class="btn btn-secondary btn-sm" onclick="inviteToRoom(${f.id}, '${f.username}')">📨 Invite to Room</button>
+            <button class="btn btn-danger btn-sm" onclick="removeFriend(${f.id})">Remove</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) { console.error(err); }
+  }
+
+  async function loadRequests() {
+    try {
+      const res = await fetch('/friends/pending');
+      const data = await res.json();
+
+      const badge = document.getElementById('request-badge');
+      if (data.incoming.length > 0) {
+        badge.textContent = data.incoming.length;
+        badge.style.display = 'inline';
+      } else {
+        badge.style.display = 'none';
+      }
+
+      const incomingEl = document.getElementById('incoming-requests');
+      incomingEl.innerHTML = data.incoming.length === 0
+        ? '<p class="empty-state">No incoming requests.</p>'
+        : data.incoming.map(r => `
+          <div class="request-item">
+            <strong>${r.display_name || r.username}</strong> <span class="text-muted">@${r.username}</span>
+            <div class="request-actions">
+              <button class="btn btn-primary btn-sm" onclick="acceptRequest(${r.request_id})">✓ Accept</button>
+              <button class="btn btn-secondary btn-sm" onclick="declineRequest(${r.request_id})">✕ Decline</button>
+            </div>
+          </div>
+        `).join('');
+
+      const outgoingEl = document.getElementById('outgoing-requests');
+      outgoingEl.innerHTML = data.outgoing.length === 0
+        ? '<p class="empty-state">No outgoing requests.</p>'
+        : data.outgoing.map(r => `
+          <div class="request-item">
+            <strong>${r.display_name || r.username}</strong> <span class="text-muted">@${r.username}</span>
+            <span class="request-pending">⏳ Pending</span>
+          </div>
+        `).join('');
+    } catch (err) { console.error(err); }
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.friends-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+
+    document.getElementById('requests-panel').style.display = tab === 'requests' ? 'block' : 'none';
+    document.getElementById('friends-list').style.display = tab === 'all' ? 'block' : 'none';
+
+    if (tab === 'all') loadFriends();
+    else loadRequests();
+  }
+
+  async function inviteToRoom(friendId, friendName) {
+    try {
+      const res = await fetch('/rooms/my');
+      const data = await res.json();
+      if (data.rooms.length === 0) {
+        alert('You need to create or join a room first before inviting friends.');
+        return;
+      }
+      const roomId = prompt(`Invite ${friendName} to which room? Your rooms:\n${data.rooms.map(r => `- ${r.name} (ID: ${r.id})`).join('\n')}\n\nEnter Room ID:`);
+      if (!roomId) return;
+      const invRes = await fetch('/invites/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room_id: roomId, to_user_id: friendId })
+      });
+      const invData = await invRes.json();
+      alert(invData.message || invData.error);
+    } catch (err) { console.error(err); }
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.friends-search')) {
+      document.getElementById('search-results').style.display = 'none';
+    }
+  });
+
+  loadAll();
+</script>

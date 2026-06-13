@@ -1,0 +1,12 @@
+<div class="error-page">
+  <h1 class="error-code">500</h1>
+  <h2>Server Error</h2>
+  <p>Something went wrong on our end. Please try again later.</p>
+  <% if (locals.error) { %>
+    <details class="error-details">
+      <summary>Technical details</summary>
+      <pre><%= error %></pre>
+    </details>
+  <% } %>
+  <a href="/" class="btn btn-primary">Go Home</a>
+</div>

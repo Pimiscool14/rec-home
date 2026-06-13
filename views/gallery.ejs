@@ -1,0 +1,176 @@
+<div class="page-header">
+  <h1>📸 Gallery</h1>
+  <p>Photos from your Rec Room adventures and the community.</p>
+</div>
+
+<section class="section" style="padding-top: 0;">
+  <% if (user) { %>
+  <div class="gallery-upload-card">
+    <h3>Upload a Photo</h3>
+    <form action="/photos/upload" method="POST" enctype="multipart/form-data" class="upload-form">
+      <div class="upload-dropzone" id="dropzone">
+        <div class="upload-placeholder">
+          <span class="upload-icon">📷</span>
+          <p>Drag & drop a photo here, or click to browse</p>
+          <span class="upload-hint">JPEG, PNG, GIF, or WebP • Max 10MB</span>
+        </div>
+        <input type="file" id="photo-input" name="photo" accept="image/jpeg,image/png,image/gif,image/webp" required>
+        <img id="preview" style="display:none;">
+      </div>
+      <div class="upload-details" id="upload-details" style="display:none;">
+        <div class="form-group">
+          <input type="text" name="title" placeholder="Photo title (optional)" class="form-input">
+        </div>
+        <div class="form-group">
+          <input type="text" name="room_name" placeholder="Room name (optional)" class="form-input">
+        </div>
+        <div class="form-group">
+          <input type="text" name="description" placeholder="Description (optional)" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="toggle-label">
+            <input type="checkbox" name="is_public" checked>
+            <span>Make this photo public</span>
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload Photo</button>
+      </div>
+    </form>
+  </div>
+  <% } %>
+
+  <div class="gallery-grid" id="gallery-grid">
+    <!-- Populated by JS -->
+  </div>
+
+  <div class="gallery-loading" id="gallery-loading">
+    <p>Loading photos...</p>
+  </div>
+
+  <div class="gallery-pagination" id="gallery-pagination"></div>
+</section>
+
+<script>
+  let currentPage = 1;
+  let loading = false;
+
+  async function loadFeed(page = 1) {
+    if (loading) return;
+    loading = true;
+    document.getElementById('gallery-loading').style.display = 'block';
+
+    try {
+      const res = await fetch(`/photos/feed?page=${page}`);
+      const data = await res.json();
+
+      const grid = document.getElementById('gallery-grid');
+
+      if (page === 1) grid.innerHTML = '';
+
+      data.photos.forEach(photo => {
+        const card = document.createElement('div');
+        card.className = 'gallery-card';
+        card.innerHTML = `
+          <a href="/uploads/photos/${photo.filename}" target="_blank" class="gallery-image-link">
+            <img src="/uploads/thumbnails/thumb_${photo.filename}" alt="${photo.title}" class="gallery-image" loading="lazy" onerror="this.src='/uploads/photos/${photo.filename}'">
+          </a>
+          <div class="gallery-card-body">
+            <div class="gallery-card-header">
+              <div class="gallery-user">
+                ${photo.avatar_url ? `<img src="${photo.avatar_url}" class="gallery-avatar">` : `<span class="gallery-avatar-placeholder">${(photo.display_name || photo.username)[0].toUpperCase()}</span>`}
+                <span>${photo.display_name || photo.username}</span>
+              </div>
+              <button class="like-btn" data-id="${photo.id}" onclick="toggleLike(${photo.id}, this)">
+                ❤️ <span class="like-count">${photo.likes_count || 0}</span>
+              </button>
+            </div>
+            ${photo.title !== 'Untitled' ? `<p class="gallery-title">${escapeHtml(photo.title)}</p>` : ''}
+            ${photo.room_name ? `<span class="gallery-room">📍 ${escapeHtml(photo.room_name)}</span>` : ''}
+            ${photo.description ? `<p class="gallery-desc">${escapeHtml(photo.description)}</p>` : ''}
+            <span class="gallery-time">${new Date(photo.created_at).toLocaleDateString()}</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // Pagination
+      const pag = document.getElementById('gallery-pagination');
+      pag.innerHTML = '';
+      if (data.totalPages > 1) {
+        for (let i = 1; i <= data.totalPages; i++) {
+          const btn = document.createElement('button');
+          btn.className = `btn btn-sm ${i === page ? 'btn-primary' : 'btn-secondary'}`;
+          btn.textContent = i;
+          btn.onclick = () => { currentPage = i; loadFeed(i); };
+          pag.appendChild(btn);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load gallery:', err);
+    } finally {
+      loading = false;
+      document.getElementById('gallery-loading').style.display = 'none';
+    }
+  }
+
+  async function toggleLike(photoId, btn) {
+    <% if (!user) { %>
+      alert('Please log in to like photos.');
+      return;
+    <% } %>
+    try {
+      const res = await fetch(`/photos/${photoId}/like`, { method: 'POST' });
+      const data = await res.json();
+      const countEl = btn.querySelector('.like-count');
+      const currentCount = parseInt(countEl.textContent) || 0;
+      countEl.textContent = data.liked ? currentCount + 1 : Math.max(0, currentCount - 1);
+      btn.style.color = data.liked ? '#e74c3c' : '';
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // File upload preview
+  const photoInput = document.getElementById('photo-input');
+  const dropzone = document.getElementById('dropzone');
+  const preview = document.getElementById('preview');
+  const uploadDetails = document.getElementById('upload-details');
+  const placeholder = dropzone?.querySelector('.upload-placeholder');
+
+  if (photoInput) {
+    photoInput.addEventListener('change', handleFileSelect);
+    dropzone.addEventListener('click', () => photoInput.click());
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        photoInput.files = e.dataTransfer.files;
+        handleFileSelect();
+      }
+    });
+  }
+
+  function handleFileSelect() {
+    const file = photoInput.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+        uploadDetails.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  loadFeed();
+</script>

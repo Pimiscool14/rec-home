@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">🏠</span>
+        <span class="logo-text">Rec Home</span>
+      </a>
+      <div class="nav-links">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/gallery" class="nav-link">Gallery</a>
+        <a href="/rooms" class="nav-link">Rooms</a>
+        <a href="/friends" class="nav-link">Friends</a>
+        <% if (user) { %>
+          <a href="/dashboard" class="nav-link">Dashboard</a>
+          <a href="/profile" class="nav-link">Profile</a>
+          <div class="user-dropdown">
+            <button class="nav-user-btn">
+              <% if (user.avatar_url) { %>
+                <img src="<%= user.avatar_url %>" alt="Avatar" class="nav-avatar">
+              <% } else { %>
+                <span class="nav-avatar-placeholder"><%= (user.display_name || user.username)[0].toUpperCase() %></span>
+              <% } %>
+              <span><%= user.display_name || user.username %></span>
+            </button>
+            <div class="dropdown-menu">
+              <a href="/dashboard">📊 Dashboard</a>
+              <a href="/profile">⚙️ Settings</a>
+              <a href="/auth/logout">🚪 Logout</a>
+            </div>
+          </div>
+        <% } else { %>
+          <a href="/auth/login" class="nav-link">Login</a>
+          <a href="/auth/register" class="btn btn-primary btn-sm">Sign Up</a>
+        <% } %>
+      </div>
+    </div>
+  </nav>
+
+  <% if (messages && (messages.error.length || messages.success.length || messages.info.length)) { %>
+    <div class="flash-container">
+      <% messages.error.forEach(msg => { %>
+        <div class="flash flash-error"><%= msg %></div>
+      <% }); %>
+      <% messages.success.forEach(msg => { %>
+        <div class="flash flash-success"><%= msg %></div>
+      <% }); %>
+      <% messages.info.forEach(msg => { %>
+        <div class="flash flash-info"><%= msg %></div>
+      <% }); %>
+    </div>
+  <% } %>
+
+  <main class="main-content">
+    <%- body %>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <span class="logo-icon">🏠</span>
+        <span class="logo-text">Rec Home</span>
+        <p class="footer-tagline">Your Rec Room companion.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="/features">Features</a>
+          <a href="/commands">Commands</a>
+          <a href="/download">Download</a>
+        </div>
+        <div class="footer-col">
+          <h4>Account</h4>
+          <a href="/auth/login">Login</a>
+          <a href="/auth/register">Sign Up</a>
+          <a href="/dashboard">Dashboard</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>Rec Home is not affiliated with Rec Room Inc. All rights belong to their respective owners.</p>
+      <p>&copy; <%= new Date().getFullYear() %> Rec Home</p>
+    </div>
+  </footer>
+</body>
+</html>

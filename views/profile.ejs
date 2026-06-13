@@ -1,0 +1,119 @@
+<div class="profile-page">
+  <h1>Profile & Settings</h1>
+
+  <div class="profile-grid">
+    <!-- Account Info -->
+    <div class="profile-card">
+      <h3>Account Information</h3>
+      <div class="profile-info">
+        <div class="info-row">
+          <span class="info-label">Username</span>
+          <span class="info-value"><%= user.username %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Display Name</span>
+          <span class="info-value"><%= user.display_name || user.username %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email</span>
+          <span class="info-value"><%= user.email %></span>
+        </div>
+        <% if (user.discord_username) { %>
+        <div class="info-row">
+          <span class="info-label">Discord</span>
+          <span class="info-value"><%= user.discord_username %></span>
+        </div>
+        <% } %>
+        <div class="info-row">
+          <span class="info-label">Role</span>
+          <span class="info-value badge badge-<%= user.role %>"><%= user.role %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Member Since</span>
+          <span class="info-value"><%= new Date(user.created_at).toLocaleDateString() %></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ESP Settings -->
+    <div class="profile-card">
+      <h3>Visual Settings</h3>
+      <form action="/auth/settings" method="POST" class="settings-form">
+        <div class="form-group">
+          <label for="esp_color">ESP Color</label>
+          <div class="color-input-group">
+            <input type="color" id="esp_color" name="esp_color" value="<%= settings.esp_color || '#ff0000' %>">
+            <span class="color-value"><%= settings.esp_color || '#ff0000' %></span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="toggle-label">
+            <input type="checkbox" name="esp_enabled" <%= settings.esp_enabled ? 'checked' : '' %>>
+            <span>ESP Enabled</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="toggle-label">
+            <input type="checkbox" name="fly_enabled" <%= settings.fly_enabled ? 'checked' : '' %>>
+            <span>Fly Mode Enabled</span>
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+      </form>
+    </div>
+
+    <!-- API Keys -->
+    <div class="profile-card">
+      <h3>API Keys</h3>
+      <p class="card-desc">Use these keys to authenticate your client with Rec Home.</p>
+      
+      <% if (apiKeys && apiKeys.length > 0) { %>
+        <div class="api-keys-list">
+          <% apiKeys.forEach(key => { %>
+            <div class="api-key-item">
+              <div class="api-key-info">
+                <span class="api-key-name"><%= key.name %></span>
+                <code class="api-key-value"><%= key.api_key.substring(0, 8) %>••••••••</code>
+              </div>
+              <div class="api-key-meta">
+                <span>Created: <%= new Date(key.created_at).toLocaleDateString() %></span>
+                <% if (key.last_used) { %>
+                  <span>Last used: <%= new Date(key.last_used).toLocaleString() %></span>
+                <% } %>
+              </div>
+              <form action="/auth/api-key/delete/<%= key.id %>" method="POST" class="api-key-delete" onsubmit="return confirm('Delete this API key?')">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <p class="empty-state">No API keys yet. Generate one below.</p>
+      <% } %>
+
+      <form action="/auth/api-key/generate" method="POST" class="api-key-form mt-1">
+        <input type="text" name="name" placeholder="Key name (optional)" class="form-input">
+        <button type="submit" class="btn btn-primary btn-sm">Generate API Key</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Recent Commands -->
+  <div class="profile-card mt-2">
+    <h3>Recent Command History</h3>
+    <% if (recentCommands && recentCommands.length > 0) { %>
+      <div class="command-log">
+        <% recentCommands.forEach(cmd => { %>
+          <div class="command-log-item">
+            <span class="cmd-name">/<%= cmd.command %></span>
+            <% if (cmd.args) { %><span class="cmd-args"><%= cmd.args.substring(0, 100) %></span><% } %>
+            <% if (cmd.room_name) { %><span class="cmd-room">in <%= cmd.room_name %></span><% } %>
+            <span class="cmd-time"><%= new Date(cmd.created_at).toLocaleString() %></span>
+          </div>
+        <% }); %>
+      </div>
+    <% } else { %>
+      <p class="empty-state">No command history yet.</p>
+    <% } %>
+  </div>
+</div>
